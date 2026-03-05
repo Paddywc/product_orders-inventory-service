@@ -32,7 +32,7 @@ The Inventory Service is the platform’s **stock authority** in an event-driven
 - **Publishes inventory outcomes** so downstream services can react without tight coupling
 - **Enforces role-aware operations** for its APIs, where privileged inventory management actions are intended for `ADMIN`, while standard platform usage remains available to `USER`
 
-- ![inv-events.png](readmeimg/inv-events.png)
+![inv-events.png](readmeimg/inv-events.png)
 
 ## Tech Stack
 
