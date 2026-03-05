@@ -1,5 +1,10 @@
 package product.orders.inventoryservice.messaging.event;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -7,26 +12,29 @@ import java.util.UUID;
 /**
  * Emitted when an order is successfully created and
  * the order saga should begin.
- * This event is immutable and safe for replay.
  */
 public record OrderCreatedEvent(
-        /**
-         * Unique event id. Prevent duplication
-         */
+
         UUID eventId,
 
-        /**
-         * Unique id of the order that was created
-         */
+
         UUID orderId,
 
-        /**
-         * Time order occurred
-         */
+        @Positive long totalAmountCents,
+
+
+        String currency,
+
+
+        UUID customerId,
+
+        @Email String customerEmail,
+
+        @NotNull @Size(max = 2000) String customerAddress,
+
+
         Instant occurredAt,
-        /**
-         * Items that were created
-         */
+    
         List<OrderItem> items) {
 
     public OrderCreatedEvent {
@@ -41,10 +49,21 @@ public record OrderCreatedEvent(
         }
     }
 
-    public static OrderCreatedEvent of(UUID orderId, List<OrderItem> items) {
+    public static OrderCreatedEvent of(UUID orderId,
+                                       Long totalAmountCents,
+                                       String currency,
+                                       UUID customerId,
+                                       String customerEmail,
+                                       String customerAddress,
+                                       List<OrderItem> items) {
         return new OrderCreatedEvent(
                 UUID.randomUUID(),   // event identity
                 orderId,
+                totalAmountCents,
+                currency,
+                customerId,
+                customerEmail,
+                customerAddress,
                 Instant.now(),
                 List.copyOf(items)   // defensive copy
         );

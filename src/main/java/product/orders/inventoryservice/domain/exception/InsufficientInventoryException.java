@@ -2,13 +2,22 @@ package product.orders.inventoryservice.domain.exception;
 
 import java.util.UUID;
 
+/**
+ * Exception thrown when an order cannot be fulfilled due to insufficient inventory.
+ */
 public class InsufficientInventoryException extends RuntimeException {
 
+    private final UUID productId;
+    private final int requestedQuantity;
+    private final int availableQuantity;
 
     public InsufficientInventoryException(UUID productId,
                                           int requestedQuantity,
                                           int availableQuantity) {
         super(buildMessage(productId, requestedQuantity, availableQuantity));
+        this.productId = productId;
+        this.requestedQuantity = requestedQuantity;
+        this.availableQuantity = availableQuantity;
     }
 
 
@@ -29,5 +38,18 @@ public class InsufficientInventoryException extends RuntimeException {
                 "Insufficient inventory for product %s: requested=%d, available=%d",
                 productId, requestedQuantity, availableQuantity
         );
+    }
+
+    // GETTERS
+    public UUID getProductId() {
+        return productId;
+    }
+
+    public int getRequestedQuantity() {
+        return requestedQuantity;
+    }
+
+    public int getAvailableQuantity() {
+        return availableQuantity;
     }
 }

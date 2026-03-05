@@ -10,19 +10,12 @@ import java.util.UUID;
  * Downstream services should treat this as a terminal success fact.
  */
 public record OrderConfirmedEvent(
-        /**
-         * Unique event id. Prevent duplication
-         */
+
         UUID eventId,
 
-        /**
-         * Unique id of the order that was confirmed
-         */
         UUID orderId,
 
-        /**
-         * Time the order was confirmed
-         */
+
         Instant occurredAt) {
 
     public OrderConfirmedEvent {

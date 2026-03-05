@@ -1,5 +1,6 @@
 package product.orders.inventoryservice.messaging.event;
 
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -12,25 +13,14 @@ import java.util.UUID;
  */
 
 public record OrderCancelledEvent(
-        /**
-         * Unique event id. Prevent duplication
-         */
+
         UUID eventId,
 
-        /**
-         * Unique id of the order that was canceled
-         */
         UUID orderId,
 
-        /**
-         * Time the order was cancelled
-         */
-        Instant occurredAt,
+        CancellationReason reason,
 
-        /**
-         * The reason why the order was cancelled
-         */
-        CancellationReason reason) {
+        Instant occurredAt) {
 
     public OrderCancelledEvent {
         if (eventId == null) {
@@ -44,11 +34,13 @@ public record OrderCancelledEvent(
         }
     }
 
-    public static OrderCancelledEvent of(UUID orderId, CancellationReason reason) {
+    public static OrderCancelledEvent of(UUID orderId, CancellationReason reason){
         return new OrderCancelledEvent(
-                UUID.randomUUID(),   // event identity
+                UUID.randomUUID(),
                 orderId,
-                Instant.now(),
-                reason);
+                reason,
+                Instant.now()
+        );
     }
+
 }

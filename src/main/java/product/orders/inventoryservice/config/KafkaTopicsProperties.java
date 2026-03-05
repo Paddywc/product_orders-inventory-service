@@ -10,8 +10,19 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "kafka.topic")
 public class KafkaTopicsProperties {
 
+    /**
+     * The name of the topic that stores the order service events
+     */
     private String orderEvents;
+    /**
+     * The name of the topic that stores the inventory service events
+     */
     private String inventoryEvents;
+
+    /**
+     * The name of the topic that stores the product service events
+     */
+    private String productEvents;
 
     public String getOrderEvents() {
         return orderEvents;
@@ -27,5 +38,13 @@ public class KafkaTopicsProperties {
 
     public void setInventoryEvents(String inventoryEvents) {
         this.inventoryEvents = inventoryEvents;
+    }
+
+    public String getProductEvents() {
+        return productEvents;
+    }
+
+    public void setProductEvents(String productEvents) {
+        this.productEvents = productEvents;
     }
 }

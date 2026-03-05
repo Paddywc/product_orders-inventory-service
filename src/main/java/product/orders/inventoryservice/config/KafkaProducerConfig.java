@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -19,18 +21,19 @@ import org.springframework.orm.jpa.JpaTransactionManager;
 import java.util.HashMap;
 import java.util.Map;
 
+// Don't create new topics when unit testing, as this starts a kafka listener
 @Configuration
 public class KafkaProducerConfig {
 
     /**
      * The number of partitions for Kafka topics
      */
-    private static final int N_PARTITIONS = 3;
+    private static final int N_PARTITIONS = 5;
 
     /**
      * The number of replicas for Kafka topics
      */
-    private static final int N_REPLICAS = 1;
+    private static final int N_REPLICAS = 3;
 
     /**
      * Configured Kafka properties via application.properties or the YAML
@@ -51,19 +54,22 @@ public class KafkaProducerConfig {
 
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
-        Map<String, Object> config = new HashMap<>();
+        Map<String, Object> config = kafkaProperties.buildProducerProperties();
 
         config.put(
                 ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
                 kafkaProperties.getBootstrapServers()
         );
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        config.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG,  kafkaProperties.getProducer().getTransactionIdPrefix());
+        config.put(JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+
         // Many events are created in a loop of all products in an order. Send them in a single batch
         config.put(ProducerConfig.LINGER_MS_CONFIG, 200);
-        return new DefaultKafkaProducerFactory<>(config);
+
+        return new DefaultKafkaProducerFactory<>(config,  new StringSerializer(), new JacksonJsonSerializer<>());
     }
 
     @Bean

@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Represents a product being reserved for an order
+ */
 @Entity
 @Table(name = "inventory_reservation", uniqueConstraints = {
         // Enforce idempotency by only allowing 1 reservation per order and product
@@ -12,27 +15,26 @@ import java.util.UUID;
 public class InventoryReservation {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false, name = "reservation_id")
     private UUID reservationId;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false, name = "order_id")
     private UUID orderId;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false, name = "product_id")
     private UUID productId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, name = "quantity")
     private int quantity;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, name = "reservation_status")
     private ReservationStatus status;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false, name = "created_at")
     private Instant createdAt;
 
-    @Column
+    @Column(name = "updated_at")
     private Instant updatedAt;
 
     protected InventoryReservation() {
@@ -85,11 +87,11 @@ public class InventoryReservation {
      * @param orderId the id of the order that the item is being reserved on
      * @param productId the product being reserved in the order
      * @param quantity the quantity of the product to reserve
-     * @return
+     * @return the reserved inventory
      */
     public static InventoryReservation reserve(UUID orderId, UUID productId, int quantity) {
         if (quantity <= 0) {
-            throw new IllegalArgumentException("Reservation quantity must be positive");
+            throw new IllegalArgumentException("Reservation quantity must be positive. " + quantity + " given for product " + productId +  " in order " + orderId);
         }
 
         return new InventoryReservation(UUID.randomUUID(), orderId, productId, quantity, ReservationStatus.RESERVED);
@@ -106,7 +108,7 @@ public class InventoryReservation {
         }
         if (status == ReservationStatus.CONFIRMED) {
             throw new IllegalStateException(
-                    "Cannot release a confirmed reservation"
+                    "Cannot release a confirmed reservation for product " + productId + " on order " + orderId
             );
         }
         this.status = ReservationStatus.RELEASED;
@@ -122,7 +124,7 @@ public class InventoryReservation {
         }
         if (status == ReservationStatus.RELEASED) {
             throw new IllegalStateException(
-                    "Cannot confirm a released reservation"
+                    "Cannot confirm a released reservation for product " + productId + " on order " + orderId
             );
         }
         this.status = ReservationStatus.CONFIRMED;

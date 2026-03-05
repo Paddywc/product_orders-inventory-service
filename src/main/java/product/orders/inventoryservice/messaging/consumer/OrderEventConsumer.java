@@ -1,65 +1,66 @@
 package product.orders.inventoryservice.messaging.consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
-import product.orders.inventoryservice.application.InventorySagaHandler;
+import product.orders.inventoryservice.application.saga.InventorySagaHandler;
 import product.orders.inventoryservice.messaging.event.OrderCancelledEvent;
 import product.orders.inventoryservice.messaging.event.OrderConfirmedEvent;
 import product.orders.inventoryservice.messaging.event.OrderCreatedEvent;
 import product.orders.inventoryservice.persistance.ProcessedOrderEvent;
 import product.orders.inventoryservice.repository.ProcessedOrderEventRepository;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
 
+/**
+ * Reads events produced by the order service
+ */
 @Component
-
 public class OrderEventConsumer {
 
 
     private final InventorySagaHandler sagaHandler;
     private final ProcessedOrderEventRepository processedOrderEventRepository;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     public OrderEventConsumer(InventorySagaHandler sagaHandler, ProcessedOrderEventRepository processedOrderEventRepository) {
         this.sagaHandler = sagaHandler;
         this.processedOrderEventRepository = processedOrderEventRepository;
     }
 
-    /**
-     * Handle incoming order events
-     * @param event the send order event
-     */
     @KafkaListener(topics = "#{@kafkaTopicsProperties.orderEvents}",
-            groupId = "${kafka.consumer.group-id}")
-    public void handle(Object event){
-        if (event instanceof OrderCreatedEvent e) {
-            handle(e.eventId(), () -> sagaHandler.reserveInventory(e));
-        }
+            groupId = "${spring.kafka.consumer.group-id}")
+    public void handleEvent(String rawJson,
+                            @Header("eventType") String eventType) {
+        JsonNode node = objectMapper.readValue(rawJson, JsonNode.class);
+        UUID eventId = UUID.fromString(node.get("eventId").stringValue());
 
-        else if (event instanceof OrderCancelledEvent e) {
-            handle(e.eventId(), () -> sagaHandler.releaseInventory(e));
-        }
-
-        else if (event instanceof OrderConfirmedEvent e) {
-            handle(e.eventId(), () -> sagaHandler.confirmInventory(e));
-        }
-
-        else{
-            throw new IllegalArgumentException("Unknown event type: " + event.getClass().getSimpleName());
-        }
-    }
-
-
-    /**
-     * Idempotent execution that checks if the event has already been processsed
-     * @param eventId the id of the event
-     * @param action the action to perform if the event has not been processed
-     */
-    private void handle(UUID eventId, Runnable action){
-        if (processedOrderEventRepository.existsById(eventId)) {
+        // Do not process duplicate events
+        try {
+            processedOrderEventRepository.saveAndFlush(new ProcessedOrderEvent(eventId));
+        } catch (DataIntegrityViolationException e) {
+            // Event already exists. Exit. Catch exception rather than checking to
+            // avoid idempotency issues
+            Logger logger = LoggerFactory.getLogger(getClass());
+            logger.debug("Event {} already processed", eventId);
             return;
         }
-        action.run();
-        processedOrderEventRepository.save(new ProcessedOrderEvent(eventId));
+
+        switch (eventType) {
+            case "OrderCreatedEvent" ->
+                    sagaHandler.reserveInventory(objectMapper.treeToValue(node, OrderCreatedEvent.class));
+            case "OrderCancelledEvent" ->
+                    sagaHandler.releaseInventory(objectMapper.treeToValue(node, OrderCancelledEvent.class));
+            case "OrderConfirmedEvent" ->
+                    sagaHandler.confirmInventory(objectMapper.treeToValue(node, OrderConfirmedEvent.class));
+        }
+
     }
 
 }

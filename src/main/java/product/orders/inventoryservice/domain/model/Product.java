@@ -1,24 +1,23 @@
 package product.orders.inventoryservice.domain.model;
 
 import jakarta.persistence.*;
+import org.jspecify.annotations.Nullable;
+import org.springframework.data.domain.Persistable;
 import product.orders.inventoryservice.domain.exception.InsufficientInventoryException;
 
 import java.util.UUID;
 
-@Entity
-@Table(name="product")
 /**
  * The name and available quantity of a product that can be ordered
  */
-public class Product {
+@Entity
+@Table(name="product")
+public class Product implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "product_id", nullable = false, updatable = false)
     private UUID productId;
 
-    @Column(nullable = false, length = 255, name="product_name")
-    private String name;
 
 
     @Column(nullable = false, name = "available_quantity")
@@ -31,43 +30,21 @@ public class Product {
     public Product() {
     }
 
-    public Product(UUID productId, String name, int availableQuantity) {
+    public Product(UUID productId, int availableQuantity) {
         this.productId = productId;
-        this.name = name;
         this.availableQuantity = availableQuantity;
     }
 
-    /* ---------- Getters and setters ---------- */
-
-    public UUID getProductId() {
-        return productId;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public int getAvailableQuantity() {
-        return availableQuantity;
-    }
-
-    public void setAvailableQuantity(int availableQuantity) {
-        this.availableQuantity = availableQuantity;
-    }
 
     /* ---------- State transitions ---------- */
 
     /**
-     * Remove the quantity from the available quantity. Throw an exception if not enough avialble to reserve
+     * Remove the quantity from the available quantity. Throw an exception if not enough available to reserve
      * @param quantity the amount to reserve
      */
     public void reserve(int quantity){
         validatePositiveQuantity(quantity);
-        if(quantity < availableQuantity){
+        if(quantity > availableQuantity){
             throw new InsufficientInventoryException(
                     productId,
                     quantity,
@@ -93,8 +70,39 @@ public class Product {
      */
     private void validatePositiveQuantity(int quantity) {
         if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than zero");
+            throw new IllegalArgumentException("Quantity must be greater than zero. " + quantity + " given for product " + productId);
         }
     }
 
+
+    /**
+     * Forces spring to call persist instead of merge when saving the product first when id is set
+     * but the version is null
+     * @return is version null
+     */
+    @Override
+    public boolean isNew() {
+        return version == null;
+    }
+
+
+
+    /* ---------- Getters and setters ---------- */
+
+    @Override
+    public @Nullable UUID getId() {
+        return productId;
+    }
+
+    public UUID getProductId() {
+        return productId;
+    }
+
+    public int getAvailableQuantity() {
+        return availableQuantity;
+    }
+
+    public void setAvailableQuantity(int availableQuantity) {
+        this.availableQuantity = availableQuantity;
+    }
 }
